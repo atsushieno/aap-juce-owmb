@@ -1,0 +1,71 @@
+plugins {
+    id "com.android.application"
+}
+
+def cpmSourceCacheDir = System.getProperty("user.home") + "/.cache/CPM/owmb"
+
+android {
+    namespace = "org.androidaudioplugin.ports.juce.owmb"
+    compileSdk = libs.versions.android.compileSdk.get().toInteger()
+
+    defaultConfig {
+        applicationId = "org.androidaudioplugin.ports.juce.owmb"
+        minSdk = libs.versions.android.minSdk.get().toInteger()
+        targetSdk = libs.versions.android.targetSdk.get().toInteger()
+        versionCode = 1
+        versionName = "1.0.0"
+
+        ndk {
+            abiFilters "x86_64", "arm64-v8a"
+        }
+
+        externalNativeBuild {
+            cmake {
+                arguments "-DCPM_SOURCE_CACHE=$cpmSourceCacheDir",
+                          "-DCMAKE_BUILD_TYPE=Release",
+                          "-DANDROID_STL=c++_shared",
+                          "-DANDROID_CPP_FEATURES=exceptions rtti"
+            }
+        }
+    }
+
+    externalNativeBuild {
+        cmake {
+            path = file("src/main/cpp/CMakeLists.txt")
+            version = libs.versions.cmake.get()
+        }
+    }
+
+    sourceSets {
+        main.java.srcDirs += [
+            "../external/owmb/modules/juce/modules/juce_gui_basics/native/java/app",
+            "../external/owmb/modules/juce/modules/juce_gui_basics/native/javaopt/app",
+            "../external/aap-juce/java"
+        ]
+    }
+
+    dependencies {
+        implementation libs.androidx.core.ktx
+        implementation libs.startup.runtime
+        implementation libs.aap.core
+        implementation libs.aap.midi.device.service
+        implementation libs.aap.ui.web
+        implementation libs.aap.ui.compose
+        implementation libs.aap.ui.compose.app
+    }
+
+    buildFeatures {
+        prefab = true
+    }
+
+    ndkVersion = libs.versions.ndk.get()
+
+    compileOptions {
+        sourceCompatibility = JavaVersion.VERSION_17
+        targetCompatibility = JavaVersion.VERSION_17
+    }
+}
+
+// CMake population creates the stable JUCE source symlink used by sourceSets.
+
+apply from: '../external/aap-juce/gradle/aap-juce.gradle'

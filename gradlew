@@ -1,0 +1,1 @@
+external/aap-core/gradlew

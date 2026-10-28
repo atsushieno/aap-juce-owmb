@@ -1,0 +1,13 @@
+.gradle/
+.idea/
+.kotlin/
+app/.cxx/
+app/build/
+build/
+dist/
+app/src/main/res/drawable/ic_launcher.png
+external/aap-core/local.properties
+external/owmb/.stamp-app
+local.properties
+*.iml
+.DS_Store

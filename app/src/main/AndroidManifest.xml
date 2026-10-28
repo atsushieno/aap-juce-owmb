@@ -1,0 +1,95 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
+
+    <supports-screens
+        android:anyDensity="true"
+        android:largeScreens="true"
+        android:normalScreens="true"
+        android:smallScreens="true"
+        android:xlargeScreens="true" />
+
+    <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.RECORD_AUDIO" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK" />
+
+    <application
+        android:hardwareAccelerated="false"
+        android:icon="@drawable/ic_launcher"
+        android:label="@string/app_name"
+        android:theme="@style/AppTheme">
+
+        <activity
+            android:name="org.androidaudioplugin.ui.compose.app.PluginManagerActivity"
+            android:exported="true"
+            android:hardwareAccelerated="true">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+
+        <activity
+            android:name="com.rmsl.juce.JuceActivity"
+            android:configChanges="keyboardHidden|orientation|screenSize"
+            android:exported="true"
+            android:hardwareAccelerated="true"
+            android:launchMode="singleTask"
+            android:screenOrientation="userLandscape" />
+
+        <service
+            android:name="org.androidaudioplugin.AudioPluginService"
+            android:exported="true"
+            android:foregroundServiceType="mediaPlayback"
+            android:label="@string/app_name">
+            <intent-filter>
+                <action android:name="org.androidaudioplugin.AudioPluginService.V4" />
+            </intent-filter>
+            <meta-data
+                android:name="org.androidaudioplugin.AudioPluginService.V4#Plugins"
+                android:resource="@xml/aap_metadata" />
+        </service>
+
+        <service
+            android:name="org.androidaudioplugin.AudioPluginViewService"
+            android:exported="true" />
+
+        <service
+            android:name="org.androidaudioplugin.midideviceservice.StandaloneAudioPluginMidiDeviceService"
+            android:exported="true"
+            android:permission="android.permission.BIND_MIDI_DEVICE_SERVICE">
+            <intent-filter>
+                <action android:name="android.media.midi.MidiDeviceService" />
+            </intent-filter>
+            <meta-data
+                android:name="android.media.midi.MidiDeviceService"
+                android:resource="@xml/midi_device_info" />
+        </service>
+
+        <service
+            android:name="org.androidaudioplugin.midideviceservice.StandaloneAudioPluginMidiUmpDeviceService"
+            android:exported="true"
+            android:permission="android.permission.BIND_MIDI_DEVICE_SERVICE"
+            tools:targetApi="35">
+            <intent-filter>
+                <action android:name="android.media.midi.MidiUmpDeviceService" />
+            </intent-filter>
+            <property
+                android:name="android.media.midi.MidiUmpDeviceService"
+                android:resource="@xml/ump_device_info" />
+        </service>
+
+        <provider
+            android:name="androidx.startup.InitializationProvider"
+            android:authorities="${applicationId}.androidx-startup"
+            android:exported="false"
+            tools:node="merge"
+            tools:replace="android:authorities">
+            <meta-data
+                android:name="org.androidaudioplugin.juce.JuceAppInitializer"
+                android:value="androidx.startup" />
+        </provider>
+    </application>
+</manifest>
+
