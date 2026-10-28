@@ -38,6 +38,14 @@
             android:launchMode="singleTask"
             android:screenOrientation="userLandscape" />
 
+        <activity
+            android:name="org.androidaudioplugin.juce.JuceFragmentHostActivity"
+            android:configChanges="keyboard|keyboardHidden|orientation|screenLayout|screenSize|smallestScreenSize|uiMode"
+            android:excludeFromRecents="true"
+            android:exported="false"
+            android:taskAffinity=""
+            android:theme="@android:style/Theme.Translucent.NoTitleBar" />
+
         <service
             android:name="org.androidaudioplugin.AudioPluginService"
             android:exported="true"
