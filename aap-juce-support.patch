@@ -76,6 +76,25 @@ index 17054cb..a4538af 100644
      target_compile_definitions(OpenWav PRIVATE JUCE_USE_CURL=1)
      find_package(CURL REQUIRED)
      target_link_libraries(OpenWav PRIVATE ${CURL_LIBRARIES})
+diff --git a/Source/Scanner/LibraryScanner.cpp b/Source/Scanner/LibraryScanner.cpp
+index f21fb7e..398a6df 100644
+--- a/Source/Scanner/LibraryScanner.cpp
++++ b/Source/Scanner/LibraryScanner.cpp
+@@ -26,11 +26,14 @@ LibraryScanner::~LibraryScanner()
+ 
+ void LibraryScanner::addListener(ScannerListener* listener)
+ {
++    const juce::ScopedLock sl(listenerLock);
+     listeners.add(listener);
+ }
+ 
+ void LibraryScanner::removeListener(ScannerListener* listener)
+ {
++    // Wait for a callback in progress on the scanner thread, as the listener is about to go away.
++    const juce::ScopedLock sl(listenerLock);
+     listeners.remove(listener);
+ }
+ 
 diff --git a/Source/UI/ConvertDialog.cpp b/Source/UI/ConvertDialog.cpp
 index 16368b3..89e58ee 100644
 --- a/Source/UI/ConvertDialog.cpp
@@ -152,3 +171,109 @@ index 08ce9b7..ba2959b 100644
    shaderProgram.reset(new juce::OpenGLShaderProgram(openGLContext));
    if (shaderProgram->addVertexShader(vertexShader) &&
        shaderProgram->addFragmentShader(fragmentShader) &&
+diff --git a/Source/UI/SampleTableComponent.cpp b/Source/UI/SampleTableComponent.cpp
+index 1ea73a3..76c8148 100644
+--- a/Source/UI/SampleTableComponent.cpp
++++ b/Source/UI/SampleTableComponent.cpp
+@@ -526,7 +526,9 @@ void SampleTableComponent::paintCell(juce::Graphics& g, int rowNumber, int colum
+     // Auto-stream more rows if user scrolls near the end of the rendered batch
+     if (rowNumber >= renderedItemCount - 25 && renderedItemCount < static_cast<int>(allFilteredItems.size()))
+     {
+-        juce::MessageManager::callAsync([this]() {
++        juce::Component::SafePointer<SampleTableComponent> safeThis(this);
++        juce::MessageManager::callAsync([this, safeThis]() {
++            if (safeThis == nullptr) return;
+             int total = static_cast<int>(allFilteredItems.size());
+             if (renderedItemCount < total)
+             {
+@@ -1182,14 +1184,18 @@ juce::String SampleTableComponent::formatDuration(double seconds)
+ 
+ void SampleTableComponent::libraryIndexUpdated()
+ {
+-    juce::MessageManager::callAsync([this] {
++    juce::Component::SafePointer<SampleTableComponent> safeThis(this);
++    juce::MessageManager::callAsync([this, safeThis] {
++        if (safeThis == nullptr) return;
+         updateFilter(currentKeyword, currentSelectedTags, currentMatchAll, currentExtFilter, currentFavOnly);
+     });
+ }
+ 
+ void SampleTableComponent::tagsUpdated()
+ {
+-    juce::MessageManager::callAsync([this] {
++    juce::Component::SafePointer<SampleTableComponent> safeThis(this);
++    juce::MessageManager::callAsync([this, safeThis] {
++        if (safeThis == nullptr) return;
+         updateFilter(currentKeyword, currentSelectedTags, currentMatchAll, currentExtFilter, currentFavOnly);
+     });
+ }
+diff --git a/Source/UI/ScanProgressDialog.cpp b/Source/UI/ScanProgressDialog.cpp
+index cc8aa67..8df0a11 100644
+--- a/Source/UI/ScanProgressDialog.cpp
++++ b/Source/UI/ScanProgressDialog.cpp
+@@ -175,8 +175,12 @@ void ScanProgressDialog::mouseDown(const juce::MouseEvent& /*event*/)
+ 
+ void ScanProgressDialog::scanStarted()
+ {
+-    juce::MessageManager::callAsync([this] {
+-        showDialog();
++    // The editor (and this dialog) can be deleted before the message runs, e.g. when a host
++    // creates an editor only to query its size.
++    juce::Component::SafePointer<ScanProgressDialog> safeThis(this);
++    juce::MessageManager::callAsync([safeThis] {
++        if (safeThis != nullptr)
++            safeThis->showDialog();
+     });
+ }
+ 
+@@ -195,7 +199,11 @@ void ScanProgressDialog::scanFinished(int totalDiscovered)
+     isScanning = false;
+     isFinished = true;
+ 
+-    juce::MessageManager::callAsync([this, totalDiscovered] {
++    juce::Component::SafePointer<ScanProgressDialog> safeThis(this);
++    juce::MessageManager::callAsync([this, safeThis, totalDiscovered] {
++        if (safeThis == nullptr)
++            return;
++
+         titleLabel.setText("Scan Complete", juce::dontSendNotification);
+         if (totalDiscovered > 0)
+         {
+@@ -212,7 +220,6 @@ void ScanProgressDialog::scanFinished(int totalDiscovered)
+         repaint();
+ 
+         // Auto-close dialogue after 1 second
+-        juce::Component::SafePointer<ScanProgressDialog> safeThis(this);
+         juce::Timer::callAfterDelay(1000, [safeThis] {
+             if (safeThis != nullptr)
+             {
+diff --git a/Source/UI/TagPanelComponent.cpp b/Source/UI/TagPanelComponent.cpp
+index 4d0a90b..3b68921 100644
+--- a/Source/UI/TagPanelComponent.cpp
++++ b/Source/UI/TagPanelComponent.cpp
+@@ -397,15 +397,21 @@ void TagPanelComponent::notifySelectionChanged()
+ 
+ void TagPanelComponent::libraryIndexUpdated()
+ {
+-    juce::MessageManager::callAsync([this] {
+-        refreshTags();
+-        refreshFolders();
++    juce::Component::SafePointer<TagPanelComponent> safeThis(this);
++    juce::MessageManager::callAsync([safeThis] {
++        if (safeThis == nullptr) return;
++        safeThis->refreshTags();
++        safeThis->refreshFolders();
+     });
+ }
+ 
+ void TagPanelComponent::tagsUpdated()
+ {
+-    juce::MessageManager::callAsync([this] { refreshTags(); });
++    juce::Component::SafePointer<TagPanelComponent> safeThis(this);
++    juce::MessageManager::callAsync([safeThis] {
++        if (safeThis != nullptr)
++            safeThis->refreshTags();
++    });
+ }
+ 
+ void TagPanelComponent::addListener(TagPanelListener* listener)
